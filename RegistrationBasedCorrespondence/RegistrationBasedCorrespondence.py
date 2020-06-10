@@ -115,73 +115,70 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
 
     logging.info('Processing completed')
 
-# #
-# # RegistrationBasedCorrespondenceTest
-# #
+
 #
-# class RegistrationBasedCorrespondenceTest(ScriptedLoadableModuleTest):
-#   """
-#   This is the test case for your scripted module.
-#   Uses ScriptedLoadableModuleTest base class, available at:
-#   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
-#   """
+# RegistrationBasedCorrespondenceTest
 #
-#   def setUp(self):
-#     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
-#     """
-#     slicer.mrmlScene.Clear(0)
-#
-#   def runTest(self):
-#     """Run as few or as many tests as needed here.
-#     """
-#     self.setUp()
-#     self.test_RegistrationBasedCorrespondence1()
-#
-#   def test_RegistrationBasedCorrespondence1(self):
-#     """ Ideally you should have several levels of tests.  At the lowest level
-#     tests should exercise the functionality of the logic with different inputs
-#     (both valid and invalid).  At higher levels your tests should emulate the
-#     way the user would interact with your code and confirm that it still works
-#     the way you intended.
-#     One of the most important features of the tests is that it should alert other
-#     developers when their changes will have an impact on the behavior of your
-#     module.  For example, if a developer removes a feature that you depend on,
-#     your test should break so they know that the feature is needed.
-#     """
-#
-#     self.delayDisplay("Starting the test")
-#
-#     # Get/create input data
-#
-#     import SampleData
-#     inputVolume = SampleData.downloadFromURL(
-#       nodeNames='MRHead',
-#       fileNames='MR-Head.nrrd',
-#       uris='https://github.com/Slicer/SlicerTestingData/releases/download/MD5/39b01631b7b38232a220007230624c8e',
-#       checksums='MD5:39b01631b7b38232a220007230624c8e')[0]
-#     self.delayDisplay('Finished with download and loading')
-#
-#     inputScalarRange = inputVolume.GetImageData().GetScalarRange()
-#     self.assertEqual(inputScalarRange[0], 0)
-#     self.assertEqual(inputScalarRange[1], 279)
-#
-#     outputVolume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode")
-#     threshold = 50
-#
-#     # Test the module logic
-#
-#     logic = RegistrationBasedCorrespondenceLogic()
-#
-#     # Test algorithm with non-inverted threshold
-#     logic.run(inputVolume, outputVolume, threshold, True)
-#     outputScalarRange = outputVolume.GetImageData().GetScalarRange()
-#     self.assertEqual(outputScalarRange[0], inputScalarRange[0])
-#     self.assertEqual(outputScalarRange[1], threshold)
-#
-#     # Test algorithm with inverted threshold
-#     logic.run(inputVolume, outputVolume, threshold, False)
-#     outputScalarRange = outputVolume.GetImageData().GetScalarRange()
-#     self.assertEqual(outputScalarRange[0], inputScalarRange[0])
-#     self.assertEqual(outputScalarRange[1], inputScalarRange[1])
-#
-#     self.delayDisplay('Test passed')
+
+class RegistrationBasedCorrespondenceTest(ScriptedLoadableModuleTest):
+  """
+  This is the test case for your scripted module.
+  Uses ScriptedLoadableModuleTest base class, available at:
+  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
+  """
+
+  def setUp(self):
+    """ Do whatever is needed to reset the state - typically a scene clear will be enough.
+    """
+    slicer.mrmlScene.Clear(0)
+
+  def runTest(self):
+    """Run as few or as many tests as needed here.
+    """
+    self.setUp()
+    self.test_RegistrationBasedCorrespondence1()
+
+  def test_RegistrationBasedCorrespondence1(self):
+    """ Ideally you should have several levels of tests.  At the lowest level
+    tests should exercise the functionality of the logic with different inputs
+    (both valid and invalid).  At higher levels your tests should emulate the
+    way the user would interact with your code and confirm that it still works
+    the way you intended.
+    One of the most important features of the tests is that it should alert other
+    developers when their changes will have an impact on the behavior of your
+    module.  For example, if a developer removes a feature that you depend on,
+    your test should break so they know that the feature is needed.
+    """
+
+    self.delayDisplay("Starting the test")
+
+    import tempfile
+    import os
+
+    logic = RegistrationBasedCorrespondenceLogic()
+
+    with tempfile.TemporaryDirectory() as tempdir:
+      tempdir = Path(tempdir)
+
+      content1 = os.urandom(32)
+      content2 = os.urandom(32)
+
+      data = tempdir / 'data'
+      data.mkdir()
+      (data / 'file').write_bytes(content1)
+      (data / 'sub').mkdir()
+      (data / 'sub' / 'file').write_bytes(content2)
+
+      output = tempdir / 'output'
+
+      logic.run(data, output)
+
+      self.assertTrue(output.exists())
+      self.assertTrue((output / 'file').exists())
+      self.assertEqual((output / 'file').read_bytes(), content1)
+
+      self.assertTrue((output / 'sub').exists())
+      self.assertTrue((output / 'file').exists())
+      self.assertEqual((output / 'sub' / 'file').read_bytes(), content2)
+
+    self.delayDisplay('Test passed')
