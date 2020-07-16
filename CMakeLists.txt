@@ -6,7 +6,7 @@ project(RegistrationBasedCorrespondence)
 # Extension meta-information
 set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/RegistrationBasedCorrespondence")
 set(EXTENSION_CATEGORY "Shape Creation")
-set(EXTENSION_CONTRIBUTORS "David Allemang (Kitware)")
+set(EXTENSION_CONTRIBUTORS "David Allemang, Jared Vicory (Kitware)")
 set(EXTENSION_DESCRIPTION "Generate correspondence of consistent non-spherical topologies")
 set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/RegistrationBasedCorrespondence.png")
 set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/RegistrationBasedCorrespondence/Screenshots/1.png")
@@ -20,6 +20,8 @@ include(${Slicer_USE_FILE})
 #-----------------------------------------------------------------------------
 # Extension modules
 add_subdirectory(RegistrationBasedCorrespondence)
+add_subdirectory(MeshToMeshRegistration)
+add_subdirectory(MeshToMeshDiffeoRegistration)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------

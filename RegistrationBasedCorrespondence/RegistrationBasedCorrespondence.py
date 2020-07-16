@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 from pathlib import Path
 
@@ -70,6 +71,7 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
     """
     try:
       self.logic.run(
+        Path(self.ui.TemplateMesh.currentPath),
         Path(self.ui.InputDirectory.directory),
         Path(self.ui.OutputDirectory.directory)
       )
@@ -93,13 +95,16 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def run(self, data: Path, output: Path):
+  def run(self, template: Path, data: Path, output: Path):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
+    :param template:
     :param data:
     :param output:
     """
+    if not template.exists():
+      raise ValueError('Template file is not valid.')
 
     if not data.is_dir():
       raise ValueError('data directory is not valid.')
@@ -108,10 +113,19 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
       raise ValueError('output directory is not valid.')
 
     logging.info('Processing started')
+    
+    files = os.listdir(data)
+    for file in files:
+      if not file.endswith('.vtp'):
+        continue
+      
+      inputFile = os.path.join(data,file)
+      outputFile = os.path.join(output,file)
+      
+      cliParams = {'templateMeshFile': os.fspath(template), 'targetMeshFile': inputFile, 'registeredTemplateFile' : outputFile}
+      print(cliParams)
+      cliNode = slicer.cli.runSync(slicer.modules.meshtomeshdiffeoregistration, None, cliParams)
 
-    if output.exists():
-      shutil.rmtree(output)
-    shutil.copytree(str(data), str(output))
 
     logging.info('Processing completed')
 
