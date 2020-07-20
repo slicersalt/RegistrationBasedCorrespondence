@@ -61,6 +61,11 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(uiWidget)
     self.ui = slicer.util.childWidgetVariables(uiWidget)
 
+    self.methodButtonGroup = qt.QButtonGroup()
+    self.methodButtonGroup.setExclusive(True)
+    self.methodButtonGroup.addButton(self.ui.DiffeoButton)
+    self.methodButtonGroup.addButton(self.ui.BSplineButton)
+
     self.logic = RegistrationBasedCorrespondenceLogic()
 
     self.ui.ApplyButton.connect('clicked(bool)', self.onApplyButton)
@@ -73,7 +78,8 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
       self.logic.run(
         Path(self.ui.TemplateMesh.currentPath),
         Path(self.ui.InputDirectory.directory),
-        Path(self.ui.OutputDirectory.directory)
+        Path(self.ui.OutputDirectory.directory),
+        self.methodButtonGroup
       )
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: {}".format(e))
@@ -95,7 +101,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def run(self, template: Path, data: Path, output: Path):
+  def run(self, template: Path, data: Path, output: Path, methodButtonGroup):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
@@ -112,6 +118,14 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     if output.exists() and not output.is_dir():
       raise ValueError('output directory is not valid.')
 
+    # Choose registration method 
+    method = methodButtonGroup.checkedButton().objectName
+
+    if method == 'DiffeoButton':
+      cliToRun = slicer.modules.meshtomeshdiffeoregistration
+    else:
+      cliToRun = slicer.modules.meshtomeshregistration
+
     logging.info('Processing started')
     
     files = os.listdir(data)
@@ -123,8 +137,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
       outputFile = os.path.join(output,file)
       
       cliParams = {'templateMeshFile': os.fspath(template), 'targetMeshFile': inputFile, 'registeredTemplateFile' : outputFile}
-      print(cliParams)
-      cliNode = slicer.cli.runSync(slicer.modules.meshtomeshdiffeoregistration, None, cliParams)
+      cliNode = slicer.cli.runSync(cliToRun, None, cliParams)
 
 
     logging.info('Processing completed')
