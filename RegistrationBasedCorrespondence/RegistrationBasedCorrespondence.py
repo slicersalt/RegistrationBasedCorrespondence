@@ -129,6 +129,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     logging.info('Processing started')
     
     files = os.listdir(data)
+    results = []
     for file in files:
       if not file.endswith('.vtp'):
         continue
@@ -139,6 +140,17 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
       cliParams = {'templateMeshFile': os.fspath(template), 'targetMeshFile': inputFile, 'registeredTemplateFile' : outputFile}
       cliNode = slicer.cli.runSync(cliToRun, None, cliParams)
 
+      results.append(outputFile)
+
+    # Load shapes into SPV
+    slicer.modules.shapepopulationviewer.widgetRepresentation().deleteModels()
+    for result in results:
+      pdr = vtk.vtkXMLPolyDataReader()
+      pdr.SetFileName(result)
+      pdr.Update()
+
+      slicer.modules.shapepopulationviewer.widgetRepresentation().loadModel(pdr.GetOutput(),result)
+    slicer.util.selectModule(slicer.modules.shapepopulationviewer)
 
     logging.info('Processing completed')
 
