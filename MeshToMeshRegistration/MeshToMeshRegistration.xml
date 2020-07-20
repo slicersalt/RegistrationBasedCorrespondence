@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+  <category>Shape Creation.Advanced</category>
+  <title>MeshToMeshRegistration</title>
+  <description><![CDATA[This is a CLI module that can be bundled in an extension]]></description>
+  <version>0.0.1</version>
+  <documentation-url>http://www.example.com/Slicer/Modules/MeshToMeshRegistration</documentation-url>
+  <license>Slicer</license>
+  <contributor>Jared Vicory (Kitware)</contributor>
+  <acknowledgements>This work was partially funded by NIH grant NXNNXXNNNNNN-NNXN</acknowledgements>
+  <parameters>
+    <label>IO</label>
+    <description><![CDATA[Input/output parameters]]></description>
+    <file>
+      <name>templateMeshFile</name>
+      <label>Template Mesh</label>
+      <longflag>templateMesh</longflag>
+      <channel>input</channel>
+      <description><![CDATA[Input volume]]></description>
+    </file>
+    <file>
+      <name>targetMeshFile</name>
+      <label>Target Mesh</label>
+      <longflag>targetMesh</longflag>
+      <channel>input</channel>
+      <description><![CDATA[Input volume]]></description>
+    </file>
+    <file>
+      <name>registeredTemplateFile</name>
+      <label>Registered Template Mesh</label>
+      <longflag>registeredTemplate</longflag>
+      <channel>output</channel>
+      <description><![CDATA[Output Volume]]></description>
+    </file>
+    </parameters>
+</executable>

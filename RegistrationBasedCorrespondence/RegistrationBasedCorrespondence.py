@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 from pathlib import Path
 
@@ -60,6 +61,11 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(uiWidget)
     self.ui = slicer.util.childWidgetVariables(uiWidget)
 
+    self.methodButtonGroup = qt.QButtonGroup()
+    self.methodButtonGroup.setExclusive(True)
+    self.methodButtonGroup.addButton(self.ui.DiffeoButton)
+    self.methodButtonGroup.addButton(self.ui.BSplineButton)
+
     self.logic = RegistrationBasedCorrespondenceLogic()
 
     self.ui.ApplyButton.connect('clicked(bool)', self.onApplyButton)
@@ -70,8 +76,10 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
     """
     try:
       self.logic.run(
+        Path(self.ui.TemplateMesh.currentPath),
         Path(self.ui.InputDirectory.directory),
-        Path(self.ui.OutputDirectory.directory)
+        Path(self.ui.OutputDirectory.directory),
+        self.methodButtonGroup
       )
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: {}".format(e))
@@ -93,13 +101,16 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def run(self, data: Path, output: Path):
+  def run(self, template: Path, data: Path, output: Path, methodButtonGroup):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
+    :param template:
     :param data:
     :param output:
     """
+    if not template.exists():
+      raise ValueError('Template file is not valid.')
 
     if not data.is_dir():
       raise ValueError('data directory is not valid.')
@@ -107,11 +118,39 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     if output.exists() and not output.is_dir():
       raise ValueError('output directory is not valid.')
 
-    logging.info('Processing started')
+    # Choose registration method 
+    method = methodButtonGroup.checkedButton().objectName
 
-    if output.exists():
-      shutil.rmtree(output)
-    shutil.copytree(str(data), str(output))
+    if method == 'DiffeoButton':
+      cliToRun = slicer.modules.meshtomeshdiffeoregistration
+    else:
+      cliToRun = slicer.modules.meshtomeshregistration
+
+    logging.info('Processing started')
+    
+    files = os.listdir(data)
+    results = []
+    for file in files:
+      if not file.endswith('.vtp'):
+        continue
+      
+      inputFile = os.path.join(data,file)
+      outputFile = os.path.join(output,file)
+      
+      cliParams = {'templateMeshFile': os.fspath(template), 'targetMeshFile': inputFile, 'registeredTemplateFile' : outputFile}
+      cliNode = slicer.cli.runSync(cliToRun, None, cliParams)
+
+      results.append(outputFile)
+
+    # Load shapes into SPV
+    slicer.modules.shapepopulationviewer.widgetRepresentation().deleteModels()
+    for result in results:
+      pdr = vtk.vtkXMLPolyDataReader()
+      pdr.SetFileName(result)
+      pdr.Update()
+
+      slicer.modules.shapepopulationviewer.widgetRepresentation().loadModel(pdr.GetOutput(),result)
+    slicer.util.selectModule(slicer.modules.shapepopulationviewer)
 
     logging.info('Processing completed')
 
