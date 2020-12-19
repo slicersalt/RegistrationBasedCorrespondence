@@ -1,4 +1,5 @@
-
+cmake_minimum_required(VERSION 3.10)
+project(MeshToMeshRegistration)
 #-----------------------------------------------------------------------------
 set(MODULE_NAME MeshToMeshRegistration)
 
@@ -29,6 +30,7 @@ set(MODULE_SRCS
 
 set(MODULE_TARGET_LIBRARIES
   ${ITK_LIBRARIES}
+  ${VTK_LIBRARIES}
   )
 
 #-----------------------------------------------------------------------------
