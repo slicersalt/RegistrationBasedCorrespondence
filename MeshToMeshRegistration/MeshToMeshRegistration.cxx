@@ -23,7 +23,6 @@
 
 #include "vtkDecimatePro.h"
 #include "vtkPolyData.h"
-#include "vtkPolyDataReader.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
 
@@ -194,13 +193,11 @@ int DoIt( int argc, char * argv[] )
   // Read in meshes
 
   auto templateReader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-  // auto templateReader = vtkSmartPointer<vtkPolyDataReader>::New();
   templateReader->SetFileName(templateMeshFile.c_str());
   templateReader->Update();
   auto templateMesh = templateReader->GetOutput();
 
   auto targetReader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-  // auto targetReader = vtkSmartPointer<vtkPolyDataReader>::New();
   targetReader->SetFileName(targetMeshFile.c_str());
   targetReader->Update();
   auto targetMesh = targetReader->GetOutput();
