@@ -28,8 +28,9 @@
 
 #include "vtkDecimatePro.h"
 #include "vtkPolyData.h"
-#include "vtkXMLPolyDataReader.h"
-#include "vtkXMLPolyDataWriter.h"
+
+#include "vtkMRMLModelNode.h"
+#include "vtkMRMLModelStorageNode.h"
 
 #include "MeshToMeshDiffeoRegistrationCLP.h"
  
@@ -173,7 +174,7 @@ ImageType::Pointer meshToImage(MeshType::Pointer mesh, ImageType::Pointer refere
   return image;
 }
 
-MeshType::Pointer polyDataToMesh(vtkSmartPointer<vtkPolyData> pd)
+MeshType::Pointer polyDataToMesh(vtkPolyData *pd)
 {
   auto mesh = MeshType::New();
 
@@ -219,20 +220,28 @@ int DoIt( int argc, char * argv[] )
  
   // Read in meshes
 
-  auto templateReader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-  templateReader->SetFileName(templateMeshFile.c_str());
-  templateReader->Update();
-  auto templateMesh = templateReader->GetOutput();
+  vtkNew<vtkMRMLModelStorageNode> templateMeshStorageNode;
+  templateMeshStorageNode->SetFileName(templateMeshFile.c_str());
+  vtkNew<vtkMRMLModelNode> templateMeshNode;
+  if (!templateMeshStorageNode->ReadData(templateMeshNode)) {
+    std::cerr << "Failed to read templateMesh file '" << templateMeshFile << "'" << std::endl;
+    return EXIT_FAILURE;
+  }
+  vtkPolyData *templateMesh = templateMeshNode->GetPolyData();
 
-  auto targetReader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-  targetReader->SetFileName(targetMeshFile.c_str());
-  targetReader->Update();
-  auto targetMesh = targetReader->GetOutput();
+  vtkNew<vtkMRMLModelStorageNode> targetMeshStorageNode;
+  targetMeshStorageNode->SetFileName(targetMeshFile.c_str());
+  vtkNew<vtkMRMLModelNode> targetMeshNode;
+  if (!targetMeshStorageNode->ReadData(targetMeshNode)) {
+    std::cerr << "Failed to read targetMesh file '" << targetMeshFile << "'" << std::endl;
+    return EXIT_FAILURE;
+  }
+  vtkPolyData *targetMesh = targetMeshNode->GetPolyData();
 
   // Convert target to ITK mesh
   std::cout << "Converting to ITK mesh" << std::endl;
-  auto targetITKMesh = polyDataToMesh(targetMesh);
-  auto templateITKMesh = polyDataToMesh(templateMesh);
+  auto targetITKMesh = polyDataToMesh(templateMesh);
+  auto templateITKMesh = polyDataToMesh(targetMesh);
 
   std::cout << "done" << std::endl;
 
@@ -282,11 +291,14 @@ using RegistrationFilterType =
     templateMesh->GetPoints()->SetPoint(pointId, transformedPoint[0], transformedPoint[1], transformedPoint[2]);
   }
 
-  
-  auto meshWriter = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-  meshWriter->SetInputData(templateMesh);
-  meshWriter->SetFileName(registeredTemplateFile.c_str());
-  meshWriter->Update();
+  // Write output mesh
+
+  vtkNew<vtkMRMLModelStorageNode> outputModelStorageNode;
+  outputModelStorageNode->SetFileName(registeredTemplateFile.c_str());
+  if (!outputModelStorageNode->WriteData(templateMeshNode)) {
+    std::cerr << "Failed to write registeredTemplate file" << std::endl;
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
