@@ -131,9 +131,6 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     files = os.listdir(data)
     results = []
     for file in files:
-      if not file.endswith('.vtp'):
-        continue
-      
       inputFile = os.path.join(data,file)
       outputFile = os.path.join(output,file)
       

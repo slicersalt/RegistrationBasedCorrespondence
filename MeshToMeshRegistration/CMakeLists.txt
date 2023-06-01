@@ -23,6 +23,7 @@ include(${VTK_USE_FILE})
 
 #-----------------------------------------------------------------------------
 set(MODULE_INCLUDE_DIRECTORIES
+    ${MRMLCore_INCLUDE_DIRS}
   )
 
 set(MODULE_SRCS
@@ -31,6 +32,7 @@ set(MODULE_SRCS
 set(MODULE_TARGET_LIBRARIES
   ${ITK_LIBRARIES}
   ${VTK_LIBRARIES}
+  MRMLCore
   )
 
 #-----------------------------------------------------------------------------
