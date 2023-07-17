@@ -129,7 +129,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     logging.info('Processing started')
     
     files = os.listdir(data)
-    results = []
+    results = [template]
     for file in files:
       inputFile = os.path.join(data,file)
       outputFile = os.path.join(output,file)
@@ -142,11 +142,13 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     # Load shapes into SPV
     slicer.modules.shapepopulationviewer.widgetRepresentation().deleteModels()
     for result in results:
-      pdr = vtk.vtkXMLPolyDataReader()
+      _, ext = os.path.splitext(result)
+      pdr = vtk.vtkXMLPolyDataReader() if ext == ".vtp" else vtk.vtkPolyDataReader()
       pdr.SetFileName(result)
       pdr.Update()
 
       slicer.modules.shapepopulationviewer.widgetRepresentation().loadModel(pdr.GetOutput(),result)
+      
     slicer.util.selectModule(slicer.modules.shapepopulationviewer)
 
     logging.info('Processing completed')
