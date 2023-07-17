@@ -19,6 +19,7 @@
 #include "itkNormalVariateGenerator.h"
 #include "itkImageFileWriter.h"
 #include "itkSignedMaurerDistanceMapImageFilter.h"
+#include "itkTransformMeshFilter.h"
 
 #include "itkDisplacementFieldTransform.h"
 
@@ -115,9 +116,57 @@ public:
     {
       return;
     }
-    std::cout << filter->GetMetric() << std::endl;
+    std::cout << "Metric: " << filter->GetMetric() << ", RMS Change: " << filter->GetRMSChange() << std::endl;
   }
 };
+
+std::vector<ImageType::Pointer> meshesToImages(std::vector<MeshType::Pointer> meshes)
+{ 
+  auto bounds = meshes[0]->GetBoundingBox()->GetBounds();
+  for (int i = 1; i < meshes.size(); i++) {
+    auto temp_bounds = meshes[i]->GetBoundingBox()->GetBounds();
+    for (int dim = 0; dim < 3; dim++) {
+      bounds[dim*2] = std::min(bounds[dim*2],temp_bounds[dim*2]);
+      bounds[(dim*2)+1] = std::max(bounds[(dim*2)+1],temp_bounds[(dim*2)+1]);
+    }
+  }
+
+  ImageType::SpacingType spacing;
+  spacing[0] = (bounds[1] - bounds[0]) / 90;
+  spacing[1] = (bounds[3] - bounds[2]) / 90;
+  spacing[2] = (bounds[5] - bounds[4]) / 90;
+
+  ImageType::PointType origin;
+  origin[0] = bounds[0] - 5*spacing[0];
+  origin[1] = bounds[2] - 5*spacing[1];
+  origin[2] = bounds[4] - 5*spacing[2];
+  
+  ImageType::SizeType size;
+  size[0] = 100;
+  size[1] = 100;
+  size[2] = 100;
+
+  using MeshToImageType = itk::TriangleMeshToBinaryImageFilter<MeshType,ImageType>;
+  using DistanceType = itk::SignedMaurerDistanceMapImageFilter<ImageType,ImageType>;
+  std::vector<ImageType::Pointer> images;
+
+  for (int i = 0; i < meshes.size(); i++) {
+    auto meshToImage = MeshToImageType::New();
+    meshToImage->SetInput(meshes[i]);
+    meshToImage->SetOrigin(origin);
+    meshToImage->SetSpacing(spacing);
+    meshToImage->SetSize(size);
+    meshToImage->Update();
+
+    auto distance = DistanceType::New();
+    distance->SetInput(meshToImage->GetOutput());
+    distance->Update();
+
+    images.push_back(distance->GetOutput());
+  }
+
+  return images;
+}
 
 ImageType::Pointer meshToImage(MeshType::Pointer mesh)
 {
@@ -239,20 +288,15 @@ int DoIt( int argc, char * argv[] )
   vtkPolyData *targetMesh = targetMeshNode->GetPolyData();
 
   // Convert target to ITK mesh
-  std::cout << "Converting to ITK mesh" << std::endl;
-  auto targetITKMesh = polyDataToMesh(templateMesh);
-  auto templateITKMesh = polyDataToMesh(targetMesh);
-
-  std::cout << "done" << std::endl;
+  auto targetITKMesh = polyDataToMesh(targetMesh);
+  auto templateITKMesh = polyDataToMesh(templateMesh);
 
   // Convert meshes to images
-  // This is opposite from what you would expect but due 
-  // to the way ITK handles transforms this will correctly
-  // yield a registration of the template into the target
-  // rather than the target into the template
-  
-  auto fixedImage = meshToImage(templateITKMesh);
-  auto movingImage = meshToImage(targetITKMesh,fixedImage);
+  std::vector<MeshType::Pointer> meshes;
+  meshes.push_back(templateITKMesh);
+  meshes.push_back(targetITKMesh);
+
+  auto images = meshesToImages(meshes);
   
 using VectorPixelType = itk::Vector<double, Dimension>;
 using DisplacementFieldType = itk::Image<VectorPixelType, Dimension>;
@@ -266,28 +310,30 @@ using RegistrationFilterType =
  CommandIterationUpdate::Pointer observer = CommandIterationUpdate::New();
   filter->AddObserver(itk::IterationEvent(), observer);
  
-  filter->SetFixedImage(fixedImage);
-  filter->SetMovingImage(movingImage);
+  filter->SetFixedImage(images[0]);
+  filter->SetMovingImage(images[1]);
  
   filter->SetNumberOfIterations(200);
   filter->SetStandardDeviations(1.0);
   filter->Update();
-  
-  std::cout << "done" << std::endl;
 
   using DisplacementFieldTransformType =
     itk::DisplacementFieldTransform<double, Dimension>;
   auto transform = DisplacementFieldTransformType::New();
   transform->SetDisplacementField(filter->GetOutput());
 
+  using TransformFilterType = itk::TransformMeshFilter<MeshType,MeshType,DisplacementFieldTransformType>;
+  auto transformFilter = TransformFilterType::New();
+  transformFilter->SetInput(templateITKMesh);
+  transformFilter->SetTransform(transform);
+  transformFilter->Update();
+
+  auto transformedMesh = transformFilter->GetOutput();
+
   using PointIdentifierType = MeshType::PointIdentifier;
-  MeshType::PointType transformedPoint;
   for( PointIdentifierType pointId = 0; pointId < templateMesh->GetNumberOfPoints(); ++pointId )
   {
-    transformedPoint[0] = templateMesh->GetPoint(pointId)[0];
-    transformedPoint[1] = templateMesh->GetPoint(pointId)[1];
-    transformedPoint[2] = templateMesh->GetPoint(pointId)[2];
-    transformedPoint = transform->TransformPoint( transformedPoint );
+    auto transformedPoint = transformedMesh->GetPoint(pointId);
     templateMesh->GetPoints()->SetPoint(pointId, transformedPoint[0], transformedPoint[1], transformedPoint[2]);
   }
 
