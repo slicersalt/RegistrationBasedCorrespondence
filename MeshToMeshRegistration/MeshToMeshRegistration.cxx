@@ -111,6 +111,54 @@ public:
   }
 };
 
+std::vector<ImageType::Pointer> meshesToImages(std::vector<MeshType::Pointer> meshes)
+{ 
+  auto bounds = meshes[0]->GetBoundingBox()->GetBounds();
+  for (int i = 1; i < meshes.size(); i++) {\
+    auto temp_bounds = meshes[i]->GetBoundingBox()->GetBounds();
+    for (int dim = 0; dim < 3; dim++) {
+      bounds[dim*2] = std::min(bounds[dim*2],temp_bounds[dim*2]);
+      bounds[(dim*2)+1] = std::max(bounds[(dim*2)+1],temp_bounds[(dim*2)+1]);
+    }
+  }
+
+  ImageType::SpacingType spacing;
+  spacing[0] = (bounds[1] - bounds[0]) / 90;
+  spacing[1] = (bounds[3] - bounds[2]) / 90;
+  spacing[2] = (bounds[5] - bounds[4]) / 90;
+
+  ImageType::PointType origin;
+  origin[0] = bounds[0] - 5*spacing[0];
+  origin[1] = bounds[2] - 5*spacing[1];
+  origin[2] = bounds[4] - 5*spacing[2];
+  
+  ImageType::SizeType size;
+  size[0] = 100;
+  size[1] = 100;
+  size[2] = 100;
+
+  using MeshToImageType = itk::TriangleMeshToBinaryImageFilter<MeshType,ImageType>;
+  using DistanceType = itk::SignedMaurerDistanceMapImageFilter<ImageType,ImageType>;
+  std::vector<ImageType::Pointer> images;
+
+  for (int i = 0; i < meshes.size(); i++) {
+    auto meshToImage = MeshToImageType::New();
+    meshToImage->SetInput(meshes[i]);
+    meshToImage->SetOrigin(origin);
+    meshToImage->SetSpacing(spacing);
+    meshToImage->SetSize(size);
+    meshToImage->Update();
+
+    auto distance = DistanceType::New();
+    distance->SetInput(meshToImage->GetOutput());
+    distance->Update();
+
+    images.push_back(distance->GetOutput());
+  }
+
+  return images;
+}
+
 ImageType::Pointer meshToImage(MeshType::Pointer mesh)
 {
   auto bounds = mesh->GetBoundingBox()->GetBounds();
@@ -212,21 +260,19 @@ int DoIt( int argc, char * argv[] )
   vtkPolyData *targetMesh = targetMeshNode->GetPolyData();
 
   // Convert target to ITK mesh
-  std::cout << "Converting to ITK mesh" << std::endl;
-  auto targetITKMesh = polyDataToMesh(templateMesh);
-  auto templateITKMesh = polyDataToMesh(targetMesh);
-
-  std::cout << "done" << std::endl;
+  auto targetITKMesh = polyDataToMesh(targetMesh);
+  auto templateITKMesh = polyDataToMesh(templateMesh);
 
   // Convert meshes to images
   // This is opposite from what you would expect but due 
   // to the way ITK handles transforms this will correctly
   // yield a registration of the template into the target
   // rather than the target into the template
-  std::cout << "converting meshes to images" << std::endl;
-  auto fixedImage = meshToImage(templateITKMesh);
-  auto movingImage = meshToImage(targetITKMesh);
-  std::cout << "done" << std::endl;
+  std::vector<MeshType::Pointer> meshes;
+  meshes.push_back(templateITKMesh);
+  meshes.push_back(targetITKMesh);
+
+  auto images = meshesToImages(meshes);
 
   using RegistrationType =
     itk::ImageRegistrationMethodv4<FixedImageType, MovingImageType>;
@@ -242,18 +288,18 @@ int DoIt( int argc, char * argv[] )
  
   for (unsigned int i = 0; i < 3; i++)
   {
-    fixedOrigin[i] = fixedImage->GetOrigin()[i];
+    fixedOrigin[i] = images[0]->GetOrigin()[i];
     fixedPhysicalDimensions[i] =
-      fixedImage->GetSpacing()[i] *
+      images[0]->GetSpacing()[i] *
       static_cast<double>(
-        fixedImage->GetLargestPossibleRegion().GetSize()[i] - 1);
+        images[0]->GetLargestPossibleRegion().GetSize()[i] - 1);
   }
   meshSize.Fill(numberOfGridNodesInOneDimension - 3);
  
   transform->SetTransformDomainOrigin(fixedOrigin);
   transform->SetTransformDomainPhysicalDimensions(fixedPhysicalDimensions);
   transform->SetTransformDomainMeshSize(meshSize);
-  transform->SetTransformDomainDirection(fixedImage->GetDirection());
+  transform->SetTransformDomainDirection(images[0]->GetDirection());
  
   registration->SetInitialTransform(transform);
   registration->InPlaceOn();
@@ -305,8 +351,8 @@ int DoIt( int argc, char * argv[] )
   smoothingSigmasPerLevel.SetSize(1);
   smoothingSigmasPerLevel[0] = 0;
  
-  registration->SetFixedImage(fixedImage);
-  registration->SetMovingImage(movingImage);
+  registration->SetFixedImage(images[0]);
+  registration->SetMovingImage(images[1]);
   registration->SetMetric(metric);
   registration->SetOptimizer(optimizer);
   registration->SetNumberOfLevels(numberOfLevels);
