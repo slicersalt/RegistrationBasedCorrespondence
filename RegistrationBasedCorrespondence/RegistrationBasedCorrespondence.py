@@ -127,10 +127,16 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
       cliToRun = slicer.modules.meshtomeshregistration
 
     logging.info('Processing started')
+
+    storage_check = slicer.vtkMRMLModelStorageNode()
     
     files = os.listdir(data)
     results = [template]
     for file in files:
+      if not storage_check.GetSupportedFileExtension(file):
+        logging.info("Skipping file %r. Invalid model format.", file)
+        continue
+
       inputFile = os.path.join(data,file)
       outputFile = os.path.join(output,file)
       
