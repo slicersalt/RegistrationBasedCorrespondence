@@ -86,6 +86,29 @@
                   </property>
                 </widget>
               </item>
+              <item row="1" column="0">
+                <widget class="QLabel">
+                  <property name="text">
+                    <string>Iterations</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="1" column="1">
+                <widget class="ctkSliderWidget" name="IterationsSlider">
+                  <property name="decimals">
+                    <number>0</number>
+                  </property>
+                  <property name="minimum">
+                    <number>1</number>
+                  </property>
+                  <property name="maximum">
+                    <number>1000</number>
+                  </property>
+                  <property name="value">
+                    <number>200</number>
+                  </property>
+                </widget>
+              </item>
           </layout>
         </widget>
       </item>
@@ -119,6 +142,12 @@
       <extends>QWidget</extends>
       <header>qMRMLWidget.h</header>
       <container>1</container>
+    </customwidget>
+    <customwidget>
+      <class>ctkSliderWidget</class>
+      <extends>QWidget</extends>
+      <header>ctkSliderWidget.h</header>
+      <container>0</container>
     </customwidget>
   </customwidgets>
   <resources/>

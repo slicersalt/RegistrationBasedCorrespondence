@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import logging
 import os
-import shutil
 from pathlib import Path
+from typing import Optional
 
-import vtk, qt, ctk, slicer
-from slicer.ScriptedLoadableModule import *
-from slicer.util import VTKObservationMixin
+import vtk
+import qt
+import slicer
+from slicer.ScriptedLoadableModule import (
+    ScriptedLoadableModule, ScriptedLoadableModuleLogic,
+    ScriptedLoadableModuleWidget, ScriptedLoadableModuleTest,
+)
 
 
 #
@@ -48,7 +54,7 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
     Called when the user opens the module the first time and the widget is initialized.
     """
     ScriptedLoadableModuleWidget.__init__(self, parent)
-    self.logic = None
+    self.logic: Optional[RegistrationBasedCorrespondenceLogic] = None
 
   def setup(self):
     """
@@ -79,7 +85,8 @@ class RegistrationBasedCorrespondenceWidget(ScriptedLoadableModuleWidget):
         Path(self.ui.TemplateMesh.currentPath),
         Path(self.ui.InputDirectory.directory),
         Path(self.ui.OutputDirectory.directory),
-        self.methodButtonGroup
+        self.methodButtonGroup,
+        self.ui.IterationsSlider.value,
       )
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: {}".format(e))
@@ -101,7 +108,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def run(self, template: Path, data: Path, output: Path, methodButtonGroup):
+  def run(self, template: Path, data: Path, output: Path, methodButtonGroup, iterations):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
@@ -118,7 +125,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     if output.exists() and not output.is_dir():
       raise ValueError('output directory is not valid.')
 
-    # Choose registration method 
+    # Choose registration method
     method = methodButtonGroup.checkedButton().objectName
 
     if method == 'DiffeoButton':
@@ -129,7 +136,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
     logging.info('Processing started')
 
     storage_check = slicer.vtkMRMLModelStorageNode()
-    
+
     files = os.listdir(data)
     results = [template]
     for file in files:
@@ -139,8 +146,13 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
 
       inputFile = os.path.join(data,file)
       outputFile = os.path.join(output,file)
-      
-      cliParams = {'templateMeshFile': os.fspath(template), 'targetMeshFile': inputFile, 'registeredTemplateFile' : outputFile}
+
+      cliParams = {
+          'templateMeshFile': os.fspath(template),
+          'targetMeshFile': inputFile,
+          'registeredTemplateFile': outputFile,
+          'iterations': iterations,
+      }
       cliNode = slicer.cli.runSync(cliToRun, None, cliParams)
 
       results.append(outputFile)
@@ -154,7 +166,7 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
       pdr.Update()
 
       slicer.modules.shapepopulationviewer.widgetRepresentation().loadModel(pdr.GetOutput(),result)
-      
+
     slicer.util.selectModule(slicer.modules.shapepopulationviewer)
 
     logging.info('Processing completed')
