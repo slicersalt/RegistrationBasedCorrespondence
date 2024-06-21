@@ -334,7 +334,7 @@ int DoIt( int argc, char * argv[] )
  
   optimizer->SetCostFunctionConvergenceFactor(1.e7);
   optimizer->SetGradientConvergenceTolerance(1e-35);
-  optimizer->SetNumberOfIterations(200);
+  optimizer->SetNumberOfIterations(iterations);
   optimizer->SetMaximumNumberOfFunctionEvaluations(200);
   optimizer->SetMaximumNumberOfCorrections(7);
   
