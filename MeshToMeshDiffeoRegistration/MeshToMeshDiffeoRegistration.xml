@@ -32,5 +32,17 @@
       <channel>output</channel>
       <description><![CDATA[Output Volume]]></description>
     </file>
-    </parameters>
+    <integer>
+      <name>iterations</name>
+      <label>Number of Iterations</label>
+      <longflag>iterations</longflag>
+      <channel>input</channel>
+      <description><![CDATA[Number of Optimizer Iterations]]></description>
+      <default>200</default>
+      <constraints>
+        <minimum>1</minimum>
+        <maximum>1000</maximum>
+      </constraints>
+    </integer>
+  </parameters>
 </executable>

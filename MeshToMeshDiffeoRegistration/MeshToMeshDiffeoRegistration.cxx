@@ -313,7 +313,7 @@ using RegistrationFilterType =
   filter->SetFixedImage(images[0]);
   filter->SetMovingImage(images[1]);
  
-  filter->SetNumberOfIterations(200);
+  filter->SetNumberOfIterations(iterations);
   filter->SetStandardDeviations(1.0);
   filter->Update();
 
