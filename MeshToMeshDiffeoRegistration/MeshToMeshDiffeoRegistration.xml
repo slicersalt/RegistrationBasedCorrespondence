@@ -41,7 +41,7 @@
       <default>200</default>
       <constraints>
         <minimum>1</minimum>
-        <maximum>1000</maximum>
+        <maximum>5000</maximum>
       </constraints>
     </integer>
   </parameters>
