@@ -28,7 +28,7 @@ class RegistrationBasedCorrespondence(ScriptedLoadableModule):
     self.parent.title = "Registration-based Correspondence"
     self.parent.categories = ["Shape Creation"]
     self.parent.dependencies = []
-    self.parent.contributors = ["David Allemang (Kitware)"]
+    self.parent.contributors = ["David Allemang (Kitware), Beatriz Paniagua (Kitware)"]
     self.parent.helpText = (
       "Generate Correspondence of consistent non-spherical topologies."
     )
@@ -163,6 +163,15 @@ class RegistrationBasedCorrespondenceLogic(ScriptedLoadableModuleLogic):
       _, ext = os.path.splitext(result)
       pdr = vtk.vtkXMLPolyDataReader() if ext == ".vtp" else vtk.vtkPolyDataReader()
       pdr.SetFileName(result)
+      pdr.Update()
+
+      # Add scalar fields for QC in SPV
+      scalars = vtk.vtkIntArray()
+      scalars.SetName("QC_RegistrationBasedCorrespondence")  
+      for i in range(pdr.GetOutput().GetNumberOfPoints()):
+          scalars.InsertNextValue(i)  
+
+      pdr.GetOutput().GetPointData().SetScalars(scalars)
       pdr.Update()
 
       slicer.modules.shapepopulationviewer.widgetRepresentation().loadModel(pdr.GetOutput(),result)
